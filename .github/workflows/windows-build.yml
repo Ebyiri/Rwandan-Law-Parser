@@ -35,8 +35,12 @@ jobs:
       run: |
         pyinstaller --noconsole --onefile --collect-all tkinterdnd2 --add-data "parser_core.dll;." --name "Rwandan_Law_Parser" app.py
 
-    - name: Upload Artifact
+    - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: Rwandan_Law_Parser_Windows
-        path: dist/Rwandan_Law_Parser.exe
+        name: Rwandan_Law_Parser_Package
+        path: |
+          dist/Rwandan_Law_Parser.exe
+          project.md
+          law.pdf
+          "Rwanda Legal Drafting Guildlines.pdf"
