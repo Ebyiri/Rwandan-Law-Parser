@@ -70,16 +70,16 @@ export fn build_ast(stream_ptr: [*]const u8, len: usize) [*]const u8 {
 
         if (manualMatch(slice, "ARTICLE") or manualMatch(slice, "INGINGO")) {
             const is_kin = manualMatch(slice, "INGINGO");
-            var offset: usize = if (is_kin) 7 else 7;
-            
+            var offset: usize = 7;
+
             if (is_kin) {
                 var k = offset;
                 while (k < slice.len and std.ascii.isWhitespace(slice[k])) : (k += 1) {}
-                if (k + 2 <= slice.len and manualMatch(slice[k..k+2], "YA")) {
+                if (k + 2 <= slice.len and (manualMatch(slice[k..k+2], "YA") or manualMatch(slice[k..k+2], "ya"))) {
                     offset = k + 2;
                 }
             }
-            
+
             const num = extractNumber(slice[offset..]);
             list.append(.{ .id = list.items.len, .parent_id = last_parent, .node_type = .ARTICLE, .number = num, .index = i }) catch {};
             i += offset + num.len; continue;
