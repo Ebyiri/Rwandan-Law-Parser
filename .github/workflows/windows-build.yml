@@ -1,46 +1,16 @@
-name: Build Windows Executable
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
+name: Build EXE
+on: [push]
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-
-    - name: Install Python Dependencies
-      run: |
-        pip install customtkinter tkinterdnd2-universal pyinstaller pymupdf
-
-    - name: Setup Zig
-      uses: mlugg/setup-zig@v1
-      with:
-        version: 0.11.0
-
-    - name: Build Windows DLL
-      run: |
-        zig build-lib parser_core.zig -dynamic -O ReleaseFast
-
-    - name: Build Exe with PyInstaller
-      run: |
-        pyinstaller --noconsole --onefile --collect-all tkinterdnd2 --add-data "parser_core.dll;." --name "Rwandan_Law_Parser" app.py
-
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: Rwandan_Law_Parser_Package
-        path: |
-          dist/Rwandan_Law_Parser.exe
-          project.md
-          law.pdf
-          "Rwanda Legal Drafting Guildlines.pdf"
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with: {python-version: '3.12'}
+    - run: pip install customtkinter pymupdf pyinstaller
+    - uses: mlugg/setup-zig@v1
+      with: {version: 0.11.0}
+    - run: zig build-lib parser_core.zig -dynamic -O ReleaseFast
+    - run: pyinstaller --noconsole --onefile --add-data "parser_core.dll;." --name "Rwandan_Law_Parser" app.py
+    - uses: actions/upload-artifact@v4
+      with: {name: Windows_Parser, path: dist/Rwandan_Law_Parser.exe}

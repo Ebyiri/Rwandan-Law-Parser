@@ -13,26 +13,30 @@ const Node = struct {
     index: usize,
 };
 
-fn isDigit(c: u8) bool { return c >= '0' and c <= '9'; }
-
-fn extractNumber(data: []const u8) []const u8 {
-    var end: usize = 0;
-    while (end < data.len and (isDigit(data[end]) or data[end] == '.')) : (end += 1) {}
-    return data[0..end];
+fn toUpper(c: u8) u8 {
+    if (c >= 'a' and c <= 'z') return c - 32;
+    return c;
 }
 
-fn caseInsensitiveMatch(data: []const u8, pattern: []const u8) bool {
+fn manualMatch(data: []const u8, pattern: []const u8) bool {
     if (data.len < pattern.len) return false;
-    for (pattern, 0..) |char, i| {
-        const d = data[i];
-        const upper_d = if (d >= 'a' and d <= 'z') d - 32 else d;
-        const upper_p = if (char >= 'a' and char <= 'z') char - 32 else char;
-        if (upper_d != upper_p) return false;
+    for (pattern, 0..) |p_char, i| {
+        if (toUpper(data[i]) != toUpper(p_char)) return false;
     }
     return true;
 }
 
-var output_buf: [1024 * 2048]u8 = undefined;
+fn extractNumber(data: []const u8) []const u8 {
+    var j: usize = 0;
+    while (j < data.len and (std.ascii.isWhitespace(data[j]) or data[j] == '.')) : (j += 1) {}
+    var start = j;
+    while (j < data.len and (std.ascii.isAlphanumeric(data[j]) or data[j] == '.')) : (j += 1) {
+        if (data[j] == ':' or data[j] == ' ') break;
+    }
+    return data[start..j];
+}
+
+var output_buf: [1024 * 1024 * 30]u8 = undefined;
 
 export fn build_ast(stream_ptr: [*]const u8, len: usize) [*]const u8 {
     const data = stream_ptr[0..len];
@@ -41,38 +45,46 @@ export fn build_ast(stream_ptr: [*]const u8, len: usize) [*]const u8 {
     var list = std.ArrayList(Node).init(allocator);
 
     var i: usize = 0;
-    var last_parent_id: i32 = -1;
+    var last_parent: i32 = -1;
 
     while (i < data.len) {
-        const remaining = data[i..];
-        var found = false;
+        const slice = data[i..];
 
-        const patterns = [_]struct { pat: []const u8, t: NodeType }{
-            .{ .pat = "BOOK ", .t = .BOOK },
-            .{ .pat = "PART ", .t = .PART },
-            .{ .pat = "TITLE ", .t = .TITLE },
-            .{ .pat = "CHAPTER ", .t = .CHAPTER },
-            .{ .pat = "Section ", .t = .SECTION },
-            .{ .pat = "Article ", .t = .ARTICLE },
-        };
-
-        inline for (patterns) |p| {
-            if (!found and caseInsensitiveMatch(remaining, p.pat)) {
-                const num = extractNumber(remaining[p.pat.len..]);
-                list.append(.{
-                    .id = list.items.len,
-                    .parent_id = last_parent_id,
-                    .node_type = p.t,
-                    .number = num,
-                    .index = i,
-                }) catch {};
-                if (p.t != .ARTICLE) last_parent_id = @intCast(list.items.len - 1);
-                i += p.pat.len + num.len;
-                found = true;
-            }
+        if (manualMatch(slice, "PART") or manualMatch(slice, "IGICE") or manualMatch(slice, "PARTIE")) {
+            list.append(.{ .id = list.items.len, .parent_id = -1, .node_type = .PART, .number = "", .index = i }) catch {};
+            last_parent = @intCast(list.items.len - 1);
+            i += 4; continue;
         }
 
-        if (!found) i += 1;
+        if (manualMatch(slice, "TITLE") or manualMatch(slice, "INTERURO") or manualMatch(slice, "TITRE")) {
+            list.append(.{ .id = list.items.len, .parent_id = last_parent, .node_type = .TITLE, .number = "", .index = i }) catch {};
+            last_parent = @intCast(list.items.len - 1);
+            i += 5; continue;
+        }
+
+        if (manualMatch(slice, "CHAPTER") or manualMatch(slice, "UMUTWE") or manualMatch(slice, "CHAPITRE")) {
+            list.append(.{ .id = list.items.len, .parent_id = last_parent, .node_type = .CHAPTER, .number = "", .index = i }) catch {};
+            last_parent = @intCast(list.items.len - 1);
+            i += 6; continue;
+        }
+
+        if (manualMatch(slice, "ARTICLE") or manualMatch(slice, "INGINGO")) {
+            const is_kin = manualMatch(slice, "INGINGO");
+            var offset: usize = if (is_kin) 7 else 7;
+            
+            if (is_kin) {
+                var k = offset;
+                while (k < slice.len and std.ascii.isWhitespace(slice[k])) : (k += 1) {}
+                if (k + 2 <= slice.len and manualMatch(slice[k..k+2], "YA")) {
+                    offset = k + 2;
+                }
+            }
+            
+            const num = extractNumber(slice[offset..]);
+            list.append(.{ .id = list.items.len, .parent_id = last_parent, .node_type = .ARTICLE, .number = num, .index = i }) catch {};
+            i += offset + num.len; continue;
+        }
+        i += 1;
     }
 
     var out_stream = std.ArrayList(u8).init(allocator);
