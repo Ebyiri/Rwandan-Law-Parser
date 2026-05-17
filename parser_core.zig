@@ -22,8 +22,8 @@ fn caseInsensitiveMatch(data: []const u8, pattern: []const u8) bool {
     return true;
 }
 
-// Buffer for the returning JSON string (simplification for prototype)
-var output_buf: [1024 * 500]u8 = undefined;
+// Increased buffer to 2MB to ensure large laws like yours fit in the JSON output
+var output_buf: [1024 * 2048]u8 = undefined;
 
 export fn build_ast(stream_ptr: [*]const u8, len: usize) [*]const u8 {
     if (len == 0) return "{}";
@@ -50,7 +50,7 @@ export fn build_ast(stream_ptr: [*]const u8, len: usize) [*]const u8 {
 
     var out_stream = std.ArrayList(u8).init(allocator);
     std.json.stringify(.{ .detected_count = list.items.len, .nodes = list.items }, .{}, out_stream.writer()) catch {};
-    out_stream.append(0) catch {}; // Null terminator
+    out_stream.append(0) catch {}; // Null terminator for C-string interop
     
     return out_stream.items.ptr;
 }
