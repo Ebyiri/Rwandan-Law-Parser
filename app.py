@@ -5,11 +5,15 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 import json
 import threading
 import time
+import sys
+import os
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-class ParserApp(ctk.CTk, TkinterDnD.DnDWrapper):
+# We use TkinterDnD.CTk instead of multiple inheritance to ensure 
+# the Tcl tkdnd extension is initialized properly.
+class ParserApp(TkinterDnD.CTk):
     def __init__(self):
         super().__init__()
         self.title("Rwandan Law Deterministic Parser")
@@ -26,9 +30,11 @@ class ParserApp(ctk.CTk, TkinterDnD.DnDWrapper):
         # Sidebar / Upload
         self.upload_frame = ctk.CTkFrame(self, width=200)
         self.upload_frame.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
-        
+
         self.drop_label = ctk.CTkLabel(self.upload_frame, text="Drag & Drop PDF Here", width=180, height=100, fg_color="gray20", corner_radius=10)
         self.drop_label.pack(pady=20, padx=10)
+        
+        # Register Drag and Drop
         self.drop_label.drop_target_register(DND_FILES)
         self.drop_label.dnd_bind('<<Drop>>', self.handle_drop)
 
@@ -56,13 +62,16 @@ class ParserApp(ctk.CTk, TkinterDnD.DnDWrapper):
 
     def start_parsing(self, path):
         self.progress.set(0)
+        self.footer.configure(text=f"Status: Parsing {os.path.basename(path)}...")
         threading.Thread(target=self.fake_parse_process).start()
 
     def fake_parse_process(self):
         for i in range(1, 101):
-            time.sleep(0.02)
+            time.sleep(0.01)
             self.progress.set(i/100)
+        self.json_text.delete("0.0", "end")
         self.json_text.insert("0.0", json.dumps({"status": "success", "engine": "Zig-Core-v1", "nodes": 8}, indent=4))
+        self.footer.configure(text="Status: Success")
 
 if __name__ == "__main__":
     app = ParserApp()
