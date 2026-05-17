@@ -11,29 +11,46 @@ pub const NodeType = enum(u8) {
     CONTENT = 6,
 };
 
-export fn build_ast(stream_ptr: [*]const u8, len: usize) i32 {
-    if (len == 0) return 0;
+fn caseInsensitiveMatch(data: []const u8, pattern: []const u8) bool {
+    if (data.len < pattern.len) return false;
+    for (pattern, 0..) |char, i| {
+        const d = data[i];
+        const upper_d = if (d >= 'a' and d <= 'z') d - 32 else d;
+        const upper_p = if (char >= 'a' and char <= 'z') char - 32 else char;
+        if (upper_d != upper_p) return false;
+    }
+    return true;
+}
+
+// Buffer for the returning JSON string (simplification for prototype)
+var output_buf: [1024 * 500]u8 = undefined;
+
+export fn build_ast(stream_ptr: [*]const u8, len: usize) [*]const u8 {
+    if (len == 0) return "{}";
     
     const data = stream_ptr[0..len];
-    var node_count: i32 = 0;
+    var fba = std.heap.FixedBufferAllocator.init(&output_buf);
+    const allocator = fba.allocator();
+
+    var list = std.ArrayList(struct { type: []const u8, index: usize }).init(allocator);
     
     var i: usize = 0;
     while (i < len - 10) : (i += 1) {
-        // Scan for structural keywords in English stream
-        if (std.mem.eql(u8, data[i..i+4], "PART")) {
-            node_count += 1;
+        if (caseInsensitiveMatch(data[i..], "PART ")) {
+            list.append(.{ .type = "PART", .index = i }) catch {};
             i += 4;
-        } else if (std.mem.eql(u8, data[i..i+7], "CHAPTER")) {
-            node_count += 1;
+        } else if (caseInsensitiveMatch(data[i..], "CHAPTER ")) {
+            list.append(.{ .type = "CHAPTER", .index = i }) catch {};
             i += 7;
-        } else if (std.mem.eql(u8, data[i..i+7], "Section")) {
-            node_count += 1;
-            i += 7;
-        } else if (std.mem.eql(u8, data[i..i+7], "Article")) {
-            node_count += 1;
+        } else if (caseInsensitiveMatch(data[i..], "Article ")) {
+            list.append(.{ .type = "ARTICLE", .index = i }) catch {};
             i += 7;
         }
     }
 
-    return node_count;
+    var out_stream = std.ArrayList(u8).init(allocator);
+    std.json.stringify(.{ .detected_count = list.items.len, .nodes = list.items }, .{}, out_stream.writer()) catch {};
+    out_stream.append(0) catch {}; // Null terminator
+    
+    return out_stream.items.ptr;
 }
