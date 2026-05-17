@@ -11,11 +11,13 @@ import os
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-# We use TkinterDnD.CTk instead of multiple inheritance to ensure 
-# the Tcl tkdnd extension is initialized properly.
-class ParserApp(TkinterDnD.CTk):
+# Corrected inheritance for CustomTkinter + TkinterDnD
+class ParserApp(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self):
         super().__init__()
+        # Initialize the DnD extension explicitly
+        self.TkdndVersion = TkinterDnD._require(self)
+        
         self.title("Rwandan Law Deterministic Parser")
         self.geometry("1100x700")
 
@@ -33,7 +35,7 @@ class ParserApp(TkinterDnD.CTk):
 
         self.drop_label = ctk.CTkLabel(self.upload_frame, text="Drag & Drop PDF Here", width=180, height=100, fg_color="gray20", corner_radius=10)
         self.drop_label.pack(pady=20, padx=10)
-        
+
         # Register Drag and Drop
         self.drop_label.drop_target_register(DND_FILES)
         self.drop_label.dnd_bind('<<Drop>>', self.handle_drop)
