@@ -11,24 +11,29 @@ pub const NodeType = enum(u8) {
     CONTENT = 6,
 };
 
-pub const Node = struct {
-    id: u32,
-    parent_id: i32,
-    node_type: NodeType,
-    number: [16]u8,
-    y0: f32,
-    source_block_ids_len: u32,
-};
-
 export fn build_ast(stream_ptr: [*]const u8, len: usize) i32 {
-    // Acknowledge parameters to satisfy Zig compiler for placeholder
-    _ = stream_ptr;
+    if (len == 0) return 0;
     
-    var nodes_created: i32 = 0;
-    if (len > 0) {
-        // Simulate detecting 1 Part, 2 Chapters, and 5 Articles based on regex matches
-        nodes_created = 8;
+    const data = stream_ptr[0..len];
+    var node_count: i32 = 0;
+    
+    var i: usize = 0;
+    while (i < len - 10) : (i += 1) {
+        // Scan for structural keywords in English stream
+        if (std.mem.eql(u8, data[i..i+4], "PART")) {
+            node_count += 1;
+            i += 4;
+        } else if (std.mem.eql(u8, data[i..i+7], "CHAPTER")) {
+            node_count += 1;
+            i += 7;
+        } else if (std.mem.eql(u8, data[i..i+7], "Section")) {
+            node_count += 1;
+            i += 7;
+        } else if (std.mem.eql(u8, data[i..i+7], "Article")) {
+            node_count += 1;
+            i += 7;
+        }
     }
 
-    return nodes_created;
+    return node_count;
 }
