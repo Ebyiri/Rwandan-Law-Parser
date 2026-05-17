@@ -20,7 +20,7 @@ jobs:
 
     - name: Install Python Dependencies
       run: |
-        pip install customtkinter tkinterdnd2-universal pyinstaller
+        pip install customtkinter tkinterdnd2-universal pyinstaller pymupdf
 
     - name: Setup Zig
       uses: mlugg/setup-zig@v1
